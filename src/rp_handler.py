@@ -15,6 +15,7 @@ pipe_prior.to("cuda")
 
 t2i_pipe = DiffusionPipeline.from_pretrained("kandinsky-community/kandinsky-2-1", torch_dtype=torch.float16)
 t2i_pipe.to("cuda")
+t2i_pipe.enable_xformers_memory_efficient_attention()
 
 def generate_image(job):
     '''
