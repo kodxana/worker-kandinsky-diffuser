@@ -1,29 +1,35 @@
 # Base image
 FROM runpod/pytorch:3.10-2.0.0-117
 
-# Use bash shell with pipefail option
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/bash", "-c"]
 
-# Set the working directory
 WORKDIR /
 
-# Update and upgrade the system packages (Worker Template)
+# Environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONBUFFERED 1
+ENV DEBIAN_FRONTEND noninteractive
+
+# Install packages
 RUN apt-get update && \
-    apt-get upgrade -y
+    apt-get install -y --no-install-recommends \
+    wget \
+    libgl1-mesa-glx \
+    libglib2.0-0 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies (Worker Template)
 COPY builder/requirements.txt /requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install --upgrade -r /requirements.txt --no-cache-dir && \
+RUN pip install --upgrade pip && \
+    pip install -r /requirements.txt && \
     rm /requirements.txt
+RUN pip install diffusers transformers accelerate
 
-# Add src files (Worker Template)
+# Fetch model
+COPY builder/model_fetcher.py /model_fetcher.py
+RUN python /model_fetcher.py
+RUN rm /model_fetcher.py
+
 ADD src .
 
-# Cleanup section (Worker Template)
-RUN apt-get autoremove -y && \
-    apt-get clean -y && \
-    rm -rf /var/lib/apt/lists/*
-
-CMD python -u /handler.py
+CMD [ "python", "-u", "/rp_handler.py" ]
